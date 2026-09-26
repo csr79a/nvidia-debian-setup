@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
 #
-# setup-nvidia-debian-sid.sh — Driver NVIDIA para Debian Sid
+# setup-nvidia-debian.sh — Driver NVIDIA para Debian (Sid, Testing, Trixie)
 #
-# Instala el driver nvidia-open vía el repositorio CUDA oficial de NVIDIA
-# (rama debian13), switcheroo-control si hay GPU híbrida, y el wrapper
-# nvidia-run para PRIME offload selectivo.
+# Instala el driver nvidia-open vía el repositorio CUDA oficial de NVIDIA,
+# switcheroo-control si hay GPU híbrida, y el wrapper nvidia-run para
+# PRIME offload selectivo.
 #
-# Proyecto hermano de setup-debian-sid.sh: antes esta lógica vivía ahí
-# (secciones 8 y 9), pero se separó a su propio repo/script para poder
-# ser una acción independiente del lanzador (lanzador-debian-sid) y
-# para no volver a tocar el setup base cada vez que cambie algo del
-# driver NVIDIA.
+# Proyecto compartido: usado como acción del lanzador tanto desde
+# setup-debian-sid como desde setup-debian-testing (y cualquier otro
+# proyecto de Debian que necesite el driver NVIDIA), en vez de tener un
+# script de NVIDIA por separado para cada suite.
 #
 # Uso:
-#   chmod +x setup-nvidia-debian-sid.sh
-#   ./setup-nvidia-debian-sid.sh          # modo interactivo
-#   ./setup-nvidia-debian-sid.sh -y       # no interactivo (ver --help)
+#   chmod +x setup-nvidia-debian.sh
+#   ./setup-nvidia-debian.sh          # modo interactivo
+#   ./setup-nvidia-debian.sh -y       # no interactivo (ver --help)
 #
 # Licencia: MIT
 
 set -euo pipefail
 
-TITLE="Driver NVIDIA — Debian Sid csr79a"
+TITLE="Driver NVIDIA — csr79a"
 VERSION="1.0.0"
 
 log()   { echo -e "\e[1;34m[*]\e[0m $*"; }
@@ -124,37 +123,33 @@ fi
 # 2. Pantalla de bienvenida
 # ----------------------------------------------------------------------
 
-confirm "Driver NVIDIA para Debian Sid csr79a ${VERSION}\n\nInstala el driver nvidia-open (repo CUDA oficial de NVIDIA), switcheroo-control si hay GPU híbrida, y el wrapper nvidia-run.\n\n¿Desea continuar?" 16 76 || exit 0
+confirm "Driver NVIDIA para Debian (Sid, Testing, Trixie) — csr79a ${VERSION}\n\nInstala el driver nvidia-open (repo CUDA oficial de NVIDIA), switcheroo-control si hay GPU híbrida, y el wrapper nvidia-run.\n\n¿Desea continuar?" 16 76 || exit 0
 
 # En Sid, VERSION_CODENAME en /etc/os-release NO siempre es fiable.
 # Este chequeo es un AVISO, no un aborto duro (a diferencia de
-# setup-debian-sid.sh): este script puede correr suelto y no reescribe
-# tus repos, solo asume que el pin al repo debian13 de NVIDIA tiene
-# sentido en Sid/unstable. Si no lo es, se pide confirmación manual.
+# setup-debian-sid.sh/setup-debian-testing.sh): este script puede correr
+# suelto y no reescribe tus repos, solo asume que la rama de NVIDIA
+# elegida más abajo (ver NVIDIA_DEBIAN_BRANCH) tiene sentido para tu
+# suite. Si no reconoce la suite, se pide confirmación manual.
 DETECTED_CODENAME=""
 if [[ -r /etc/os-release ]]; then
   . /etc/os-release
   DETECTED_CODENAME="${VERSION_CODENAME:-}"
-  if [[ "$DETECTED_CODENAME" != "sid" && "$DETECTED_CODENAME" != "unstable" ]]; then
-    confirm "Aviso: este script está pensado para Debian Unstable (Sid).\n\nSe ha detectado: ${PRETTY_NAME:-desconocido} (VERSION_CODENAME='${DETECTED_CODENAME:-vacío}').\n\nEl repositorio y el pin de NVIDIA que usa este script asumen Sid/unstable. Confirma tú mismo que tus repos ya apuntan a unstable antes de continuar.\n\n¿Confirmas que este sistema ya apunta a unstable/sid?" 18 76 || exit 1
-  fi
+  case "$DETECTED_CODENAME" in
+    sid|unstable|testing|trixie|forky) ;; # suites conocidas, se sigue sin preguntar
+    *)
+      confirm "Aviso: este script está pensado para Debian Sid, Testing o Trixie.\n\nSe ha detectado: ${PRETTY_NAME:-desconocido} (VERSION_CODENAME='${DETECTED_CODENAME:-vacío}').\n\nEl repositorio y el pin de NVIDIA que usa este script asumen una de esas suites. Confirma tú mismo que sabes lo que haces antes de continuar.\n\n¿Confirmas que quieres continuar de todos modos?" 18 76 || exit 1
+      ;;
+  esac
 fi
 
 # ----------------------------------------------------------------------
 # 3. Driver NVIDIA (opcional)
 # ----------------------------------------------------------------------
 #
-# Mismo patrón que en setup-debian-trixie.sh y setup-debian-testing.sh:
+# Mismo patrón que en setup-debian-sid.sh/setup-debian-testing.sh:
 # detectar -> preguntar -> instalar por repo oficial (cuda-keyring), sin
 # pinear versión.
-#
-# NOTA sobre el repo: NVIDIA publica el keyring/repo CUDA por versión de
-# Debian estable (p. ej. "debian13"), no existe una rama "sid" dedicada.
-# Se usa aquí el paquete de debian13 -- es la combinación ya probada y
-# en uso, la misma que en trixie/testing; si en el futuro deja de
-# funcionar, revisa la URL vigente en
-# https://developer.download.nvidia.com/compute/cuda/repos/ y ajusta
-# NVIDIA_KEYRING_URL más abajo.
 #
 # LIMITACIÓN CONOCIDA: "nvidia-open" solo soporta GPUs Turing en
 # adelante (RTX 20xx, GTX 16xx, y más recientes). El script no
@@ -163,7 +158,28 @@ fi
 # Secure Boot / MOK enrollment queda deliberadamente FUERA de este
 # script: solo se detecta y se avisa, remitiendo a MANUAL.md.
 
-NVIDIA_KEYRING_URL="https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/cuda-keyring_1.1-1_all.deb"
+# NOTA sobre el repo: NVIDIA publica el keyring/repo CUDA por versión
+# NUMERADA de Debian (p. ej. "debian13" = Debian 13, sea Trixie testing
+# o ya estable), no por nombre de suite. Hoy, Sid/Testing/Trixie/Forky
+# resuelven todos a la misma rama porque Debian 14 aún no tiene rama
+# propia publicada por NVIDIA. El día que Sid (y luego Testing) avancen
+# a paquetes de Debian 14, solo hace falta cambiar la rama de esos casos
+# aquí abajo -- el resto del script no necesita tocarse. Revisa la URL
+# vigente en https://developer.download.nvidia.com/compute/cuda/repos/
+# si el keyring da 404.
+case "$DETECTED_CODENAME" in
+  trixie)
+    NVIDIA_DEBIAN_BRANCH="debian13" ;;
+  sid|unstable)
+    NVIDIA_DEBIAN_BRANCH="debian13" ;;  # cambiar a debian14 cuando Sid avance
+  testing|forky)
+    NVIDIA_DEBIAN_BRANCH="debian13" ;;  # cambiar a debian14 cuando "testing" ya no sea Trixie
+  *)
+    NVIDIA_DEBIAN_BRANCH="debian13"
+    warn "Suite '${DETECTED_CODENAME:-desconocida}' no reconocida explícitamente; se asume la rama debian13 de NVIDIA."
+    ;;
+esac
+NVIDIA_KEYRING_URL="https://developer.download.nvidia.com/compute/cuda/repos/${NVIDIA_DEBIAN_BRANCH}/x86_64/cuda-keyring_1.1-1_all.deb"
 
 GPU_INFO=""
 if ensure_cmd lspci pciutils; then
@@ -232,7 +248,7 @@ if echo "$GPU_INFO" | grep -qi nvidia; then
 
   if [[ "$WGET_OK" -ne 1 ]] && ! dpkg -s cuda-keyring >/dev/null 2>&1; then
     warn "Se ha detectado una GPU NVIDIA, pero falta 'wget' (necesario para añadir el repositorio de NVIDIA) y no se pudo instalar. Se omite el driver NVIDIA."
-  elif confirm "GPU NVIDIA detectada:\n  ${NVIDIA_LINE}\n\nAviso: este paso instala 'nvidia-open', el módulo de kernel de código abierto de NVIDIA, vía el repositorio CUDA oficial de NVIDIA (rama debian13, la combinación usada y probada también en trixie/testing). Solo soporta GPUs Turing en adelante (RTX 20xx, GTX 16xx, RTX 30xx/40xx/50xx...). En una GPU más antigua (GTX 10xx y anteriores) este driver no cargará; en ese caso necesitarías el paquete 'nvidia-driver' (propietario clásico) en su lugar. El script no comprueba el modelo concreto, solo que el fabricante sea NVIDIA.\n\n${SB_NOTE}\n\n¿Instalar el driver NVIDIA (nvidia-open, última versión disponible en el repo)?" 28 76; then
+  elif confirm "GPU NVIDIA detectada:\n  ${NVIDIA_LINE}\n\nAviso: este paso instala 'nvidia-open', el módulo de kernel de código abierto de NVIDIA, vía el repositorio CUDA oficial de NVIDIA (rama ${NVIDIA_DEBIAN_BRANCH}). Solo soporta GPUs Turing en adelante (RTX 20xx, GTX 16xx, RTX 30xx/40xx/50xx...). En una GPU más antigua (GTX 10xx y anteriores) este driver no cargará; en ese caso necesitarías el paquete 'nvidia-driver' (propietario clásico) en su lugar. El script no comprueba el modelo concreto, solo que el fabricante sea NVIDIA.\n\n${SB_NOTE}\n\n¿Instalar el driver NVIDIA (nvidia-open, última versión disponible en el repo)?" 28 76; then
 
     # --- Repositorio de NVIDIA (cuda-keyring) ---
     NVIDIA_REPO_READY=0
@@ -472,7 +488,7 @@ if [[ "$GPU_COUNT" -ge 2 ]]; then
         sudo tee /usr/local/bin/nvidia-run >/dev/null <<'EOF'
 #!/usr/bin/env bash
 # nvidia-run — lanza un comando forzando el offload a la GPU NVIDIA
-# (PRIME render offload). Generado por setup-nvidia-debian-sid.sh.
+# (PRIME render offload). Generado por setup-nvidia-debian.sh.
 set -euo pipefail
 if [[ $# -eq 0 ]]; then
   echo "Uso: nvidia-run <comando> [args...]" >&2
@@ -498,12 +514,12 @@ fi
 # ----------------------------------------------------------------------
 
 if [[ "${NVIDIA_INSTALLED:-0}" -eq 1 ]]; then
-  cat <<'EOF'
+  cat <<EOF
 
 Driver NVIDIA instalado (nvidia-open, última versión del repo), junto
 con librerías de 32 bits (nvidia-driver-libs:i386, para Steam/Proton)
 y nvidia-vaapi-driver (aceleración de vídeo por hardware en navegadores).
-El repo NVIDIA CUDA (rama debian13) se fijó como origen preferente para
+El repo NVIDIA CUDA (rama ${NVIDIA_DEBIAN_BRANCH}) se fijó como origen preferente para
 todo el stack nvidia-*/libnvidia-* (ver /etc/apt/preferences.d/nvidia-cuda).
 Reinicia para que cargue el nuevo driver. Si tienes Secure Boot activado,
 no reinicies sin antes seguir la sección 'Secure Boot / NVIDIA' de

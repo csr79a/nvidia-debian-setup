@@ -1,4 +1,4 @@
-# Manual — setup-nvidia-debian-sid
+# Manual — nvidia-debian-setup
 
 Este manual cubre lo que el script **no** hace de forma automática y los procedimientos de verificación, troubleshooting y reversión.
 
@@ -195,8 +195,8 @@ Reinicia después de todo esto.
 
 ## Notas sobre el repositorio de NVIDIA
 
-NVIDIA publica el keyring/repo CUDA por versión **estable** de Debian (`debian12`, `debian13`...), no existe una rama `sid` dedicada. Este script usa la rama `debian13`, la misma combinación ya probada en Trixie/Testing. Si en el futuro deja de funcionar (paquetes no encontrados, 404 al descargar el keyring), comprueba la URL vigente en:
+NVIDIA publica el keyring/repo CUDA por versión **numerada** de Debian (`debian12`, `debian13`...), no existe una rama `sid` dedicada. El script elige la rama según la suite detectada (`NVIDIA_DEBIAN_BRANCH`, ver `README.md`); hoy Sid, Testing, Forky y Trixie resuelven todos a `debian13`. Si en el futuro deja de funcionar (paquetes no encontrados, 404 al descargar el keyring), comprueba la URL vigente en:
 
 <https://developer.download.nvidia.com/compute/cuda/repos/>
 
-y actualiza `NVIDIA_KEYRING_URL` en el script.
+y actualiza el `case` de `NVIDIA_DEBIAN_BRANCH` en el script (por ejemplo, cuando Sid avance a paquetes de Debian 14).
