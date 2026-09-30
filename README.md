@@ -65,7 +65,7 @@ Ayuda:
 
 - No pinea una versión concreta del driver: instala siempre la más reciente disponible en el repo CUDA de NVIDIA.
 - No firma el módulo del kernel para Secure Boot (proceso MOK manual, ver `MANUAL.md`).
-- No distingue el modelo exacto de GPU NVIDIA, solo que el fabricante sea NVIDIA � la comprobación de compatibilidad (Turing+) queda en tu mano.
+- No distingue el modelo exacto de GPU NVIDIA, solo que el fabricante sea NVIDIA; la comprobación de compatibilidad (Turing+) queda en tu mano.
 - No modifica `nouveau`/GRUB si la instalación del paquete falla, precisamente para no dejar el sistema sin driver gráfico funcional.
 
 ## Archivos que modifica
@@ -78,7 +78,7 @@ Ayuda:
 | `/etc/modprobe.d/nvidia-preserve-vram.conf` | Se crea (se sobrescribe en cada ejecución) | No aplica (fichero propio) |
 | `/usr/local/bin/nvidia-run` | Se crea (opcional, GPU híbrida) | No aplica (fichero nuevo propio) |
 
-M�s detalle de cada uno en [`MANUAL.md`](MANUAL.md).
+Más detalle de cada uno en [`MANUAL.md`](MANUAL.md).
 
 ## Verificación tras reiniciar
 
@@ -95,10 +95,10 @@ nvidia-run glxinfo | grep "OpenGL renderer"
 
 ## Proyectos relacionados
 
-- [`debian-sid-setup`](https://github.com/csr79a/debian-sid-setup) � setup base de Debian Sid, del que se desacopló originalmente este script.
+- [`debian-sid-setup`](https://github.com/csr79a/debian-sid-setup) — setup base de Debian Sid, del que se desacopló originalmente este script.
 - `debian-testing-setup` � setup base equivalente para Debian Testing/Trixie; usa este mismo repo para el driver NVIDIA.
-- [`setup-gaming-debian-sid`](https://github.com/csr79a/setup-gaming-debian-sid) � optimización de Debian Sid para gaming.
+- [`setup-gaming-debian-sid`](https://github.com/csr79a/setup-gaming-debian-sid) — optimización de Debian Sid para gaming.
 
 ## Licencia
 
-MIT � ver [`LICENSE`](LICENSE).
+MIT — ver [`LICENSE`](LICENSE).
