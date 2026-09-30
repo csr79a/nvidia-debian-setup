@@ -96,7 +96,7 @@ nvidia-run glxinfo | grep "OpenGL renderer"
 ## Proyectos relacionados
 
 - [`debian-sid-setup`](https://github.com/csr79a/debian-sid-setup) — setup base de Debian Sid, del que se desacopló originalmente este script.
-- `debian-testing-setup` � setup base equivalente para Debian Testing/Trixie; usa este mismo repo para el driver NVIDIA.
+- `debian-testing-setup` — setup base equivalente para Debian Testing/Trixie; usa este mismo repo para el driver NVIDIA.
 - [`setup-gaming-debian-sid`](https://github.com/csr79a/setup-gaming-debian-sid) — optimización de Debian Sid para gaming.
 
 ## Licencia
